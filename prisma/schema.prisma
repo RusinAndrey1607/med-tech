@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Clinic {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+
+  createdAt DateTime @default(now())
+
+  patients     Patient[]
+  appointments Appointment[]
+}
+
+model Patient {
+  id        String   @id @default(uuid())
+  clinicId  String
+  firstName String
+  lastName  String
+  phone     String?
+  createdAt DateTime @default(now())
+
+  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  appointments Appointment[]
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  clinicId  String
+  patientId String
+  startsAt  DateTime
+  status    String   @default("scheduled")
+  createdAt DateTime @default(now())
+
+  clinic  Clinic  @relation(fields: [clinicId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@unique([clinicId, patientId, startsAt])
+
+  @@index([clinicId])
+  @@index([patientId])
+  @@index([startsAt])
+}
+
+model IdempotencyKey {
+  id             String   @id @default(uuid())
+  key            String   @unique
+  responseStatus Int
+  requestHash    String
+  responseBody   Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@index([expiresAt])
+}
+
