@@ -64,3 +64,24 @@ model IdempotencyKey {
   @@index([expiresAt])
 }
 
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model OutboxEvent {
+  id          String            @id @default(uuid())
+  type        String
+  aggregateId String
+  payload     Json
+  status      OutboxEventStatus @default(PENDING)
+  attempts    Int               @default(0)
+  createdAt   DateTime          @default(now())
+  processedAt DateTime?
+  claimedAt   DateTime?
+
+  @@index([status, createdAt])
+}

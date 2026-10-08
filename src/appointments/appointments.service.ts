@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { Appointment, Prisma } from '@prisma/client';
@@ -9,16 +9,22 @@ import { Cache } from 'cache-manager';
 import { REDIS_CLIENT } from '../redis/redis.module';
 import { Redis } from 'ioredis';
 import { createHash } from 'crypto';
+import { NotificationJobName } from '../notifications/enum/notification-job-name.enum';
 
 @Injectable()
 export class AppointmentsService {
     constructor(
         private readonly prisma: PrismaService,
+
         @Inject(CACHE_MANAGER)
         private readonly cache: Cache,
         @Inject(REDIS_CLIENT)
         private readonly redis: Redis,
+
     ) { }
+    private readonly logger = new Logger(
+        AppointmentsService.name,
+    )
     private getRequestHash(dto: CreateAppointmentDto): string {
         return createHash('sha256')
             .update(JSON.stringify(dto))
@@ -76,8 +82,14 @@ export class AppointmentsService {
                 key: idempotencyKey,
             },
         });
+        this.logger.log(
+            `[IDEMPOTENCY] New request: key=${idempotencyKey}`,
+        );
 
         if (existing) {
+            this.logger.log(
+                `[IDEMPOTENCY] Reusing response: key=${idempotencyKey}`,
+            );
             if (existing.requestHash !== requestHash) {
                 throw new ConflictException(
                     'Idempotency-Key was already used with another request',
@@ -115,7 +127,24 @@ export class AppointmentsService {
                         status: dto.status,
                     },
                 });
-
+                this.logger.log(
+                    `[APPOINTMENT] Created: id=${appointment.id}`,
+                );
+                await tx.outboxEvent.create({
+                    data: {
+                        type: NotificationJobName.APPOINTMENT_CREATED,
+                        aggregateId: appointment.id,
+                        payload: {
+                            appointmentId: appointment.id,
+                            patientId: appointment.patientId,
+                            clinicId: appointment.clinicId,
+                            startsAt: appointment.startsAt,
+                        },
+                    },
+                });
+                this.logger.log(
+                    `[OUTBOX] Event created: type=${NotificationJobName.APPOINTMENT_CREATED}, aggregateId=${appointment.id}`,
+                );
                 await tx.idempotencyKey.create({
                     data: {
                         key: idempotencyKey,
@@ -169,7 +198,7 @@ export class AppointmentsService {
                 throw new ConflictException(
                     'Patient already has an appointment at this time',
                 );
-                
+
             }
             throw error;
         }

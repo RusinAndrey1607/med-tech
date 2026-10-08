@@ -12,18 +12,26 @@ import { KeyvCacheableMemory } from 'cacheable';
 import { createKeyv } from '@keyv/redis';
 import { Keyv } from 'keyv';
 import { RedisModule } from './redis/redis.module';
-
+import { NotificationsModule } from './notifications/notifications.module';
+import { OutboxModule } from './outbox/outbox.module';
+import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
-  imports: [HealthModule,
+  imports: [
     ConfigModule.forRoot({
       isGlobal: true
     }),
-    PrismaModule,
-    ClinicsModule,
-    PatientsModule,
-    AppointmentsModule,
+    ScheduleModule.forRoot(),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          url: configService.getOrThrow<string>('REDIS_URL'),
+        },
+      }),
+    }),
     CacheModule.registerAsync({
-       isGlobal: true,
+      isGlobal: true,
       inject: [ConfigService],
 
       useFactory: (configService: ConfigService) => {
@@ -43,7 +51,18 @@ import { RedisModule } from './redis/redis.module';
         };
       },
     }),
+    HealthModule,
+
+    PrismaModule,
+    ClinicsModule,
+    PatientsModule,
+    AppointmentsModule,
+
+
     RedisModule,
+    NotificationsModule,
+    OutboxModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],
