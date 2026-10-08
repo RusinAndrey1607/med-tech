@@ -2,9 +2,16 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { NotificationJobName } from './enum/notification-job-name.enum';
 import { Logger } from '@nestjs/common';
+import { NotificationsService } from './notifications.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 @Processor('notifications')
 export class NotificationsProcessor extends WorkerHost {
+    constructor(
+        private readonly notificationsService: NotificationsService,
+        private readonly realtimeService: RealtimeService,
+
+    ) { super() }
     private readonly logger = new Logger(
         NotificationsProcessor.name,
     );
@@ -33,8 +40,30 @@ export class NotificationsProcessor extends WorkerHost {
     ) {
         const { appointmentId } = job.data;
 
-         this.logger.log(
-            `[NOTIFICATION] Appointment created: ${appointmentId}`,
+        if (!job.id) {
+            throw new Error('Notification job id is missing');
+        }
+
+        const notification =
+            await this.notificationsService
+                .createAppointmentCreatedNotification(
+                    job.id,
+                    appointmentId,
+                );
+        this.realtimeService.emit({
+            type: NotificationJobName.APPOINTMENT_CREATED,
+            data: {
+                notificationId: notification?.id,
+                appointmentId,
+                title: notification?.title,
+                message: notification?.message,
+            },
+        });
+        this.logger.log(
+            `[SSE] Event emitted: notification=${notification?.id}`,
+        );
+        this.logger.log(
+            `[NOTIFICATION] Created: id=${notification?.id}, appointment=${appointmentId}`,
         );
 
         // Здесь позже будет:

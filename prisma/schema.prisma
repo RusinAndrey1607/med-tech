@@ -85,3 +85,27 @@ model OutboxEvent {
 
   @@index([status, createdAt])
 }
+
+model Notification {
+  id            String             @id @default(uuid())
+  eventId       String             @unique
+  appointmentId String
+  type          NotificationType
+  title         String
+  message       String
+  status        NotificationStatus @default(UNREAD)
+  createdAt     DateTime           @default(now())
+  readAt        DateTime?
+
+  @@index([appointmentId])
+  @@index([status, createdAt])
+}
+
+enum NotificationType {
+  APPOINTMENT_CREATED
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}

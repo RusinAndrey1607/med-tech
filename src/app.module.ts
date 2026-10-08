@@ -16,6 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OutboxModule } from './outbox/outbox.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RealtimeModule } from './realtime/realtime.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -62,6 +63,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     RedisModule,
     NotificationsModule,
     OutboxModule,
+    RealtimeModule,
 
   ],
   controllers: [AppController],
