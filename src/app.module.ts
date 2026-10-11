@@ -19,6 +19,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RealtimeModule } from './realtime/realtime.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { KafkaModule } from './kafka/kafka.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -68,6 +69,7 @@ import { UsersModule } from './users/users.module';
     RealtimeModule,
     AuthModule,
     UsersModule,
+    KafkaModule,
 
   ],
   controllers: [AppController],

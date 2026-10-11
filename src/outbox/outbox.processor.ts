@@ -1,4 +1,5 @@
 import {
+    Inject,
     Injectable,
     Logger,
 } from '@nestjs/common';
@@ -9,6 +10,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OutboxEventStatus } from '@prisma/client';
 import { NotificationJobName } from '../notifications/enum/notification-job-name.enum';
 import { OutboxService } from './outbox.service';
+import { ClientKafka } from '@nestjs/microservices';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class OutboxProcessor {
@@ -22,6 +25,8 @@ export class OutboxProcessor {
 
         @InjectQueue('notifications')
         private readonly notificationsQueue: Queue,
+        @Inject('AUDIT_KAFKA')
+        private readonly kafkaClient: ClientKafka,
     ) { }
     private getNotificationJobName(
         type: string,
@@ -36,7 +41,9 @@ export class OutboxProcessor {
                 );
         }
     }
-
+    async onModuleInit() {
+        await this.kafkaClient.connect();
+    }
     @Cron('*/5 * * * * *')
     async process() {
 
@@ -74,6 +81,17 @@ export class OutboxProcessor {
                 );
                 this.logger.log(
                     `[QUEUE] Job added: name=${jobName}, jobId=${event.id}`,
+                );
+                const kafkaEvent = {
+                    eventId: event.id,
+                    eventType: event.type,
+                    aggregateId: event.aggregateId,
+                    occurredAt: event.createdAt.toISOString(),
+                    payload: event.payload,
+                };
+
+                await lastValueFrom(
+                    this.kafkaClient.emit('appointment-events', kafkaEvent),
                 );
                 await this.prisma.outboxEvent.update({
                     where: {

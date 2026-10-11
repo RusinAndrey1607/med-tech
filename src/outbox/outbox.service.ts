@@ -16,27 +16,29 @@ export class OutboxService {
                 type: string;
                 aggregateId: string;
                 payload: unknown;
+                createdAt: Date;
             }[]
         >`
-            UPDATE "OutboxEvent"
-            SET
-                status = ${OutboxEventStatus.PROCESSING}::"OutboxEventStatus",
-                "claimedAt" = NOW(),
-                attempts = attempts + 1
-            WHERE id IN (
-                SELECT id
-                FROM "OutboxEvent"
-                WHERE status = ${OutboxEventStatus.PENDING}::"OutboxEventStatus"
-                ORDER BY "createdAt" ASC
-                FOR UPDATE SKIP LOCKED
-                LIMIT ${limit}
-            )
-            RETURNING
-                id,
-                type,
-                "aggregateId",
-                payload;
-        `;
+        UPDATE "OutboxEvent"
+        SET
+            status = ${OutboxEventStatus.PROCESSING}::"OutboxEventStatus",
+            "claimedAt" = NOW(),
+            attempts = attempts + 1
+        WHERE id IN (
+            SELECT id
+            FROM "OutboxEvent"
+            WHERE status = ${OutboxEventStatus.PENDING}::"OutboxEventStatus"
+            ORDER BY "createdAt" ASC
+            FOR UPDATE SKIP LOCKED
+            LIMIT ${limit}
+        )
+        RETURNING
+            id,
+            type,
+            "aggregateId",
+            payload,
+            "createdAt";
+    `;
     }
 
     async recoverStuckEvents() {
