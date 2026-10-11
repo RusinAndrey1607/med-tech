@@ -12,9 +12,9 @@ datasource db {
 }
 
 model Clinic {
-  id        String   @id @default(uuid())
-  name      String
-  address   String
+  id      String @id @default(uuid())
+  name    String
+  address String
 
   createdAt DateTime @default(now())
 
@@ -32,6 +32,8 @@ model Patient {
 
   clinic       Clinic        @relation(fields: [clinicId], references: [id])
   appointments Appointment[]
+  userId       String?       @unique
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model Appointment {
@@ -46,7 +48,6 @@ model Appointment {
   patient Patient @relation(fields: [patientId], references: [id])
 
   @@unique([clinicId, patientId, startsAt])
-
   @@index([clinicId])
   @@index([patientId])
   @@index([startsAt])
@@ -63,7 +64,6 @@ model IdempotencyKey {
 
   @@index([expiresAt])
 }
-
 
 enum OutboxEventStatus {
   PENDING
@@ -108,4 +108,13 @@ enum NotificationType {
 enum NotificationStatus {
   UNREAD
   READ
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  patient      Patient?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

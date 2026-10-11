@@ -4,12 +4,15 @@ import { NotificationJobName } from './enum/notification-job-name.enum';
 import { Logger } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Processor('notifications')
 export class NotificationsProcessor extends WorkerHost {
     constructor(
         private readonly notificationsService: NotificationsService,
         private readonly realtimeService: RealtimeService,
+        private readonly prisma: PrismaService,
+
 
     ) { super() }
     private readonly logger = new Logger(
@@ -50,8 +53,21 @@ export class NotificationsProcessor extends WorkerHost {
                     job.id,
                     appointmentId,
                 );
+        const appointment = await this.prisma.appointment.findUnique({
+            where: {
+                id: appointmentId,
+            },
+        });
+
+        if (!appointment) {
+            throw new Error(
+                `Appointment not found: ${appointmentId}`,
+            );
+        }
         this.realtimeService.emit({
             type: NotificationJobName.APPOINTMENT_CREATED,
+            patientId: appointment.patientId,
+
             data: {
                 notificationId: notification?.id,
                 appointmentId,

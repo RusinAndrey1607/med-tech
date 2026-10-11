@@ -17,6 +17,8 @@ import { OutboxModule } from './outbox/outbox.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RealtimeModule } from './realtime/realtime.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -64,6 +66,8 @@ import { RealtimeModule } from './realtime/realtime.module';
     NotificationsModule,
     OutboxModule,
     RealtimeModule,
+    AuthModule,
+    UsersModule,
 
   ],
   controllers: [AppController],

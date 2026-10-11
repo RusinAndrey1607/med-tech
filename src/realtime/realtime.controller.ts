@@ -1,6 +1,7 @@
 import {
     Controller,
     MessageEvent,
+    Query,
     Sse,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
@@ -17,9 +18,10 @@ export class RealtimeController {
     ) { }
 
     @Sse('notifications')
-    notifications(): Observable<MessageEvent> {
-        
-        return this.realtimeService.subscribe().pipe(
+    notifications(
+        @Query('patientId') patientId: string,
+    ): Observable<MessageEvent> {
+        return this.realtimeService.subscribe(patientId).pipe(
             map((event: RealtimeEvent) => ({
                 type: event.type,
                 data: event.data,
