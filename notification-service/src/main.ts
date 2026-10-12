@@ -10,7 +10,9 @@ async function bootstrap() {
       options: {
         client: {
           clientId: 'notification-service',
-          brokers: ['localhost:9094'],
+          brokers: (
+            process.env.KAFKA_BROKERS ?? 'localhost:9094'
+          ).split(','),
         },
         consumer: {
           groupId: 'notification-service-group',
